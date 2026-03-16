@@ -1,0 +1,16 @@
+# Virtual environment — never push this
+venv/
+
+# Secrets — never push this
+.env
+
+# Python cache files
+__pycache__/
+*.pyc
+*.pyo
+
+# Pytest cache
+.pytest_cache/
+
+# AI index files (added later)
+faiss_index/
