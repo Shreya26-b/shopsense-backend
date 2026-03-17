@@ -40,3 +40,12 @@ app.include_router(analytics.router)    # ← add this line
 @app.get("/health")
 def health_check():
     return {"status": "ok", "message": "ShopSense API is running"}
+
+@app.on_event("startup")
+async def startup():
+    try:
+        await database.connect()
+        print("✅ Database connected successfully")
+    except Exception as e:
+        print(f"❌ Database connection failed: {e}")
+        raise e
