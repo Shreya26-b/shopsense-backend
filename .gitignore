@@ -14,3 +14,7 @@ __pycache__/
 
 # AI index files (added later)
 faiss_index/
+
+# Add `faiss_index/*.index` and `faiss_index/*.json` to `.gitignore` so the actual index files don't get committed — they're large binary files that get rebuilt from the database:
+faiss_index/*.index
+faiss_index/*.json

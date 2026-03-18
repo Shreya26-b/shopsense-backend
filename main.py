@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 from database import database
 from routers import auth, analytics    # ← add analytics here
 import os
+from routers import auth, analytics, index 
 
 load_dotenv()
 
@@ -35,7 +36,8 @@ async def shutdown():
 
 # Routers
 app.include_router(auth.router)
-app.include_router(analytics.router)    # ← add this line
+app.include_router(analytics.router)  
+app.include_router(index.router)     # ← add this line
 
 @app.get("/health")
 def health_check():
@@ -49,3 +51,4 @@ async def startup():
     except Exception as e:
         print(f"❌ Database connection failed: {e}")
         raise e
+    
