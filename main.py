@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from database import database
-from routers import auth, analytics, index, chat
+from routers import auth, analytics, index, chat, products
 import os
 
 load_dotenv()
@@ -42,6 +42,7 @@ app.include_router(auth.router)
 app.include_router(analytics.router)
 app.include_router(index.router)
 app.include_router(chat.router)  
+app.include_router(products.router)   
 
 @app.get("/health")
 def health_check():
