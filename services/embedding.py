@@ -32,24 +32,41 @@ def embed_texts(texts: list[str]) -> np.ndarray:
 def texts_to_chunks(products: list[dict], orders: list[dict]) -> list[str]:
     """
     Convert raw database rows into text chunks for embedding.
-    
-    Each chunk is a human-readable sentence describing one record.
-    The quality of these chunks directly affects RAG accuracy —
-    more descriptive chunks = better retrieval results.
+    Improved format includes revenue context for better retrieval.
     """
     chunks = []
 
-    # Convert each product to a descriptive text chunk
+    # Build order stats per product for richer product chunks
+    product_stats = {}
+    for o in orders:
+        pid = str(o.get("product_id") or o.get("id", ""))
+        pname = o.get("product_name", "")
+        if pname not in product_stats:
+            product_stats[pname] = {
+                "total_revenue": 0,
+                "total_units":   0,
+                "order_count":   0
+            }
+        product_stats[pname]["total_revenue"] += float(o.get("revenue", 0))
+        product_stats[pname]["total_units"]   += int(o.get("quantity", 0))
+        product_stats[pname]["order_count"]   += 1
+
+    # Product chunks — now include sales performance
     for p in products:
+        name  = p["name"]
+        stats = product_stats.get(name, {})
         chunk = (
-            f"Product: {p['name']}, "
+            f"Product: {name}, "
             f"Category: {p['category'] or 'Uncategorized'}, "
             f"Price: ${float(p['price']):.2f}, "
-            f"Stock: {p['stock']} units available"
+            f"Stock: {p['stock']} units, "
+            f"Total revenue: ${stats.get('total_revenue', 0):.2f}, "
+            f"Total units sold: {stats.get('total_units', 0)}, "
+            f"Number of orders: {stats.get('order_count', 0)}"
         )
         chunks.append(chunk)
 
-    # Convert each order to a descriptive text chunk
+    # Order chunks — individual transactions
     for o in orders:
         chunk = (
             f"Order: {o['product_name']} purchased by {o['customer_name']}, "

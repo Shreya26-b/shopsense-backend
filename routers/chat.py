@@ -8,10 +8,10 @@ from database import database
 router = APIRouter(prefix="/chat", tags=["Chat"])
 
 
-# ── Request/Response models ───────────────────────────────
+# ── Request models ────────────────────────────────────────
 
 class ChatMessage(BaseModel):
-    role:    str   # "user" or "assistant"
+    role:    str
     content: str
 
 class ChatRequest(BaseModel):
@@ -19,7 +19,7 @@ class ChatRequest(BaseModel):
     conversation_history: list[ChatMessage] = []
 
 
-# ── Chat endpoint ─────────────────────────────────────────
+# ── Chat query endpoint ───────────────────────────────────
 
 @router.post("/query")
 async def chat_query(
@@ -28,11 +28,9 @@ async def chat_query(
 ):
     """
     Main RAG chatbot endpoint.
-    Retrieves relevant data, builds prompt, calls LLM,
-    saves conversation to database, returns answer.
+    Retrieves relevant chunks, builds prompt,
+    calls Groq LLM, saves to DB, returns answer.
     """
-
-    # Run the complete RAG pipeline
     result = await run_rag_query(
         user_id=user_id,
         question=body.question,
@@ -41,7 +39,7 @@ async def chat_query(
         ]
     )
 
-    # Save the Q&A to chat history in database
+    # Save Q&A to database for chat history
     await database.execute(
         """
         INSERT INTO "ChatHistory"
@@ -66,10 +64,11 @@ async def chat_query(
 # ── Chat history endpoint ─────────────────────────────────
 
 @router.get("/history")
-async def get_chat_history(user_id: str = Depends(get_current_user)):
+async def get_chat_history(
+    user_id: str = Depends(get_current_user)
+):
     """
-    Returns all past Q&A pairs for the authenticated user.
-    Used to populate the chat history panel in the UI.
+    Returns last 50 Q&A pairs for the authenticated user.
     """
     rows = await database.fetch_all(
         """

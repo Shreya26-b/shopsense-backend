@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from database import database
-from routers import auth, analytics, index, chat   # ← add analytics here
+from routers import auth, analytics, index, chat
 import os
 
 load_dotenv()
@@ -27,28 +27,22 @@ app.add_middleware(
 
 @app.on_event("startup")
 async def startup():
-    await database.connect()
-
-@app.on_event("shutdown")
-async def shutdown():
-    await database.disconnect()
-
-# Routers
-app.include_router(auth.router)
-app.include_router(analytics.router)  
-app.include_router(index.router)
-app.include_router(chat.router)      # ← add this line
-
-@app.get("/health")
-def health_check():
-    return {"status": "ok", "message": "ShopSense API is running"}
-
-@app.on_event("startup")
-async def startup():
     try:
         await database.connect()
         print("✅ Database connected successfully")
     except Exception as e:
         print(f"❌ Database connection failed: {e}")
         raise e
-    
+
+@app.on_event("shutdown")
+async def shutdown():
+    await database.disconnect()
+
+app.include_router(auth.router)
+app.include_router(analytics.router)
+app.include_router(index.router)
+app.include_router(chat.router)  
+
+@app.get("/health")
+def health_check():
+    return {"status": "ok", "message": "ShopSense API is running"}
