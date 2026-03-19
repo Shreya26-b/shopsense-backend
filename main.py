@@ -6,6 +6,30 @@ from database import database
 from routers import auth, analytics, index, chat, products
 import os
 
+# main.py
+import sys
+print(f"Python version: {sys.version}")
+print("Starting imports...")
+
+try:
+    from fastapi import FastAPI
+    print("FastAPI imported")
+    from fastapi.middleware.cors import CORSMiddleware
+    print("CORS imported")
+    from dotenv import load_dotenv
+    print("dotenv imported")
+    from database import database
+    print("database imported")
+    from routers import auth, analytics, index, chat, products
+    print("All routers imported")
+    import os
+    print("All imports successful")
+except Exception as e:
+    print(f"IMPORT ERROR: {e}")
+    import traceback
+    traceback.print_exc()
+    sys.exit(1)
+
 load_dotenv()
 
 app = FastAPI(
