@@ -3,19 +3,24 @@ import os
 os.environ["CUDA_VISIBLE_DEVICES"] = ""
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
-# Force CPU-only torch before any other imports
 import torch
 torch.set_num_threads(1)
 
 from sentence_transformers import SentenceTransformer
 import numpy as np
 
-print("Loading embedding model...")
+# Model is pre-downloaded during build phase
+# This just loads from local cache — fast startup
+CACHE_DIR = "/opt/render/project/src/.cache/models"
+os.makedirs(CACHE_DIR, exist_ok=True)
+
+print("Loading embedding model from cache...")
 model = SentenceTransformer(
     "all-MiniLM-L6-v2",
-    device="cpu"
+    device="cpu",
+    cache_folder=CACHE_DIR
 )
-print("Embedding model loaded successfully")
+print("Embedding model loaded")
 
 
 def embed_text(text: str) -> np.ndarray:
@@ -26,7 +31,7 @@ def embed_texts(texts: list[str]) -> np.ndarray:
     return model.encode(
         texts,
         convert_to_numpy=True,
-        show_progress_bar=False,   # disable progress bar on server
+        show_progress_bar=False,
         batch_size=32
     )
 
