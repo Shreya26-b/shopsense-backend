@@ -1,45 +1,41 @@
 # services/embedding.py
+import os
+os.environ["CUDA_VISIBLE_DEVICES"] = ""
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
+# Force CPU-only torch before any other imports
+import torch
+torch.set_num_threads(1)
+
 from sentence_transformers import SentenceTransformer
 import numpy as np
 
-# Load the model once when the module is imported
-# This takes ~3 seconds on first load but is then cached in memory
-# all-MiniLM-L6-v2 produces 384-dimensional vectors
-# It's small (80MB), fast, and accurate enough for our use case
 print("Loading embedding model...")
-model = SentenceTransformer("all-MiniLM-L6-v2")
-print("✅ Embedding model loaded")
+model = SentenceTransformer(
+    "all-MiniLM-L6-v2",
+    device="cpu"
+)
+print("Embedding model loaded successfully")
 
 
 def embed_text(text: str) -> np.ndarray:
-    """
-    Convert a single string into a 384-dimensional vector.
-    Used for embedding user questions at query time.
-    """
     return model.encode(text, convert_to_numpy=True)
 
 
 def embed_texts(texts: list[str]) -> np.ndarray:
-    """
-    Convert a list of strings into a matrix of vectors.
-    Used for embedding all products/orders when building the FAISS index.
-    
-    Returns shape: (len(texts), 384)
-    """
-    return model.encode(texts, convert_to_numpy=True, show_progress_bar=True)
+    return model.encode(
+        texts,
+        convert_to_numpy=True,
+        show_progress_bar=False,   # disable progress bar on server
+        batch_size=32
+    )
 
 
 def texts_to_chunks(products: list[dict], orders: list[dict]) -> list[str]:
-    """
-    Convert raw database rows into text chunks for embedding.
-    Improved format includes revenue context for better retrieval.
-    """
     chunks = []
 
-    # Build order stats per product for richer product chunks
     product_stats = {}
     for o in orders:
-        pid = str(o.get("product_id") or o.get("id", ""))
         pname = o.get("product_name", "")
         if pname not in product_stats:
             product_stats[pname] = {
@@ -51,7 +47,6 @@ def texts_to_chunks(products: list[dict], orders: list[dict]) -> list[str]:
         product_stats[pname]["total_units"]   += int(o.get("quantity", 0))
         product_stats[pname]["order_count"]   += 1
 
-    # Product chunks — now include sales performance
     for p in products:
         name  = p["name"]
         stats = product_stats.get(name, {})
@@ -66,7 +61,6 @@ def texts_to_chunks(products: list[dict], orders: list[dict]) -> list[str]:
         )
         chunks.append(chunk)
 
-    # Order chunks — individual transactions
     for o in orders:
         chunk = (
             f"Order: {o['product_name']} purchased by {o['customer_name']}, "
