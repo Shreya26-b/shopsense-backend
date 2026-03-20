@@ -1,34 +1,38 @@
 # services/embedding.py
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = ""
-os.environ["TOKENIZERS_PARALLELISM"] = "false"
+os.environ["CUDA_VISIBLE_DEVICES"]           = ""
+os.environ["TOKENIZERS_PARALLELISM"]         = "false"
+os.environ["HF_HUB_DISABLE_SYMLINKS_WARNING"] = "1"
 
-import torch
-torch.set_num_threads(1)
-
-from sentence_transformers import SentenceTransformer
 import numpy as np
 
-# Model is pre-downloaded during build phase
-# This just loads from local cache — fast startup
-CACHE_DIR = "/opt/render/project/src/.cache/models"
-os.makedirs(CACHE_DIR, exist_ok=True)
+# ── Lazy model loading ────────────────────────────────────
+# Model is NOT loaded on import — only when first needed
+# This allows the server to start and open the port
+# before doing any heavy work
+_model = None
 
-print("Loading embedding model from cache...")
-model = SentenceTransformer(
-    "all-MiniLM-L6-v2",
-    device="cpu",
-    cache_folder=CACHE_DIR
-)
-print("Embedding model loaded")
+def get_model():
+    global _model
+    if _model is None:
+        import torch
+        torch.set_num_threads(1)
+        from sentence_transformers import SentenceTransformer
+        print("Loading embedding model...")
+        _model = SentenceTransformer(
+            "all-MiniLM-L6-v2",
+            device="cpu"
+        )
+        print("Embedding model loaded successfully")
+    return _model
 
 
 def embed_text(text: str) -> np.ndarray:
-    return model.encode(text, convert_to_numpy=True)
+    return get_model().encode(text, convert_to_numpy=True)
 
 
 def embed_texts(texts: list[str]) -> np.ndarray:
-    return model.encode(
+    return get_model().encode(
         texts,
         convert_to_numpy=True,
         show_progress_bar=False,
