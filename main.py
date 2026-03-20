@@ -1,34 +1,18 @@
 # main.py
+import sys
+import asyncio
+import os
+
+print(f"Python version: {sys.version}")
+print("Starting imports...")
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from database import database
-from routers import auth, analytics, index, chat, products
-import os
-from services.faiss_index import build_user_index
-# main.py
-import sys
-print(f"Python version: {sys.version}")
-print("Starting imports...")
+from routers import auth, analytics, index, chat, products, importer
 
-try:
-    from fastapi import FastAPI
-    print("FastAPI imported")
-    from fastapi.middleware.cors import CORSMiddleware
-    print("CORS imported")
-    from dotenv import load_dotenv
-    print("dotenv imported")
-    from database import database
-    print("database imported")
-    from routers import auth, analytics, index, chat, products, importer
-    print("All routers imported")
-    import os
-    print("All imports successful")
-except Exception as e:
-    print(f"IMPORT ERROR: {e}")
-    import traceback
-    traceback.print_exc()
-    sys.exit(1)
+print("All imports successful")
 
 load_dotenv()
 
@@ -52,44 +36,30 @@ app.add_middleware(
 @app.on_event("startup")
 async def startup():
     try:
-        await database.connect()
-        print("✅ Database connected successfully")
+        # 10 second timeout — prevents hanging if DB is slow
+        await asyncio.wait_for(database.connect(), timeout=10.0)
+        print("Database connected successfully")
+    except asyncio.TimeoutError:
+        print("Database connection timed out — continuing anyway")
     except Exception as e:
-        print(f"❌ Database connection failed: {e}")
-        raise e
+        print(f"Database connection failed: {e}")
+        # Don't raise — let server start even if DB connection fails
+        # Individual routes will handle DB errors themselves
 
 @app.on_event("shutdown")
 async def shutdown():
-    await database.disconnect()
+    try:
+        await database.disconnect()
+    except Exception:
+        pass
 
 app.include_router(auth.router)
 app.include_router(analytics.router)
 app.include_router(index.router)
-app.include_router(chat.router)  
-app.include_router(products.router)  
-app.include_router(importer.router) 
+app.include_router(chat.router)
+app.include_router(products.router)
+app.include_router(importer.router)
 
 @app.get("/health")
 def health_check():
     return {"status": "ok", "message": "ShopSense API is running"}
-
-@app.on_event("startup")
-async def startup():
-    try:
-        await database.connect()
-        print("Database connected successfully")
-
-        # Auto-rebuild FAISS index for all users on startup
-        # This fixes the issue of index being lost on Render restart
-        users = await database.fetch_all('SELECT id FROM "User"')
-        for user in users:
-            user_id = str(user["id"])
-            index_path = f"faiss_index/{user_id}.index"
-            if not os.path.exists(index_path):
-                print(f"Rebuilding index for user {user_id[:8]}...")
-                await build_user_index(user_id)
-                print(f"Index rebuilt for user {user_id[:8]}")
-
-    except Exception as e:
-        print(f"Startup error: {e}")
-        raise e
