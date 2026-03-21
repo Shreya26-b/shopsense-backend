@@ -95,3 +95,28 @@ async def refresh(refresh_token: str):
         return {"access_token": create_access_token(user_id)}
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
+
+# routers/auth.py
+
+class RefreshRequest(BaseModel):
+    refresh_token: str
+
+@router.post("/refresh")
+async def refresh(body: RefreshRequest):
+    from jose import jwt, JWTError
+    from dotenv import load_dotenv
+    import os
+    load_dotenv()
+
+    try:
+        payload = jwt.decode(
+            body.refresh_token,
+            os.getenv("JWT_REFRESH_SECRET"),
+            algorithms=["HS256"]
+        )
+        user_id = payload.get("sub")
+        if not user_id:
+            raise HTTPException(status_code=401, detail="Invalid refresh token")
+        return {"access_token": create_access_token(user_id)}
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
