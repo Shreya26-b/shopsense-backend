@@ -1,0 +1,60 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          pip install torch==2.3.0+cpu --index-url https://download.pytorch.org/whl/cpu
+          pip install -r requirements.txt
+
+      - name: Check Python syntax
+        run: |
+          python -m py_compile main.py
+          python -m py_compile database.py
+          python -m py_compile auth.py
+          python -m py_compile routers/auth.py
+          python -m py_compile routers/analytics.py
+          python -m py_compile routers/chat.py
+          python -m py_compile routers/index.py
+          python -m py_compile routers/products.py
+          python -m py_compile routers/importer.py
+          python -m py_compile services/embedding.py
+          python -m py_compile services/faiss_index.py
+          python -m py_compile services/rag.py
+          python -m py_compile services/recommendations.py
+          python -m py_compile services/importer.py
+          echo "All syntax checks passed"
+
+      - name: Verify imports
+        run: |
+          python -c "
+          import os
+          os.environ['DATABASE_URL']        = 'postgresql://test:test@localhost/test'
+          os.environ['JWT_SECRET']          = 'test-secret'
+          os.environ['JWT_REFRESH_SECRET']  = 'test-secret'
+          os.environ['GROQ_API_KEY']        = 'test-key'
+          print('Environment set')
+          "
+        env:
+          DATABASE_URL:       postgresql://test:test@localhost/test
+          JWT_SECRET:         test-secret
+          JWT_REFRESH_SECRET: test-secret
+          GROQ_API_KEY:       test-key
