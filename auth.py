@@ -24,7 +24,7 @@ JWT_REFRESH_SECRET = os.getenv("JWT_REFRESH_SECRET")
 ALGORITHM          = "HS256"
 
 def create_access_token(user_id: str) -> str:
-    expire = datetime.utcnow() + timedelta(minutes=15)
+    expire = datetime.utcnow() + timedelta(hours=1)
     payload = {"sub": user_id, "exp": expire, "type": "access"}
     return jwt.encode(payload, JWT_SECRET, algorithm=ALGORITHM)
 
@@ -48,3 +48,4 @@ def get_current_user(
         return user_id
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
+
