@@ -1,15 +1,13 @@
 # services/embedding.py
 import os
-os.environ["CUDA_VISIBLE_DEVICES"]           = ""
-os.environ["TOKENIZERS_PARALLELISM"]         = "false"
+os.environ["CUDA_VISIBLE_DEVICES"]            = ""
+os.environ["TOKENIZERS_PARALLELISM"]          = "false"
 os.environ["HF_HUB_DISABLE_SYMLINKS_WARNING"] = "1"
+os.environ["OMP_NUM_THREADS"]                 = "1"
+os.environ["MKL_NUM_THREADS"]                 = "1"
 
 import numpy as np
 
-# ── Lazy model loading ────────────────────────────────────
-# Model is NOT loaded on import — only when first needed
-# This allows the server to start and open the port
-# before doing any heavy work
 _model = None
 
 def get_model():
@@ -36,7 +34,7 @@ def embed_texts(texts: list[str]) -> np.ndarray:
         texts,
         convert_to_numpy=True,
         show_progress_bar=False,
-        batch_size=32
+        batch_size=4            # ← reduced from 32 to 4 for free tier
     )
 
 
